@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import uvicorn
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional
 
 app = FastAPI()
 
@@ -25,9 +26,30 @@ def get_book(book_id: int):
     return {"error": "Book not found"}, 404
 
 class NewBook(BaseModel):
-    title: str
-    author: str
-    id: int
+    id: Optional[int] = None
+    title: str = Field(..., min_length=1, max_length=100, description="The title of the book")
+    author: str = Field(..., min_length=1, max_length=100, description="The author of the book")
+
+    @field_validator('title')
+    def title_must_be_valid(cls, v):
+        if v.strip() == "":
+            raise ValueError('Title cannot be empty or only whitespace')
+        return v.strip()
+
+    @field_validator('author')
+    def author_must_be_valid(cls, v):
+        if v.strip() == "":
+            raise ValueError('Author cannot be empty or only whitespace')
+        return v.strip()
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "title": "The Catcher in the Rye",
+                "author": "J.D. Salinger"
+            }
+        }
+
 
 @app.post("/books", summary="Add a new book", tags=["Books"])
 def add_book(new_book: NewBook):
